@@ -9,14 +9,15 @@ const adminRoutes = require('./routes/adminRoutes');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
-  : [];
+const allowedOrigins = (process.env.CORS_ORIGIN ||
+  'http://localhost:5173,http://127.0.0.1:5173')
+  .split(',')
+  .map((origin) => origin.trim());
 
 app.use(helmet());
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     return callback(new Error('Origin is not allowed by CORS.'));

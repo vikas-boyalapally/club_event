@@ -8,15 +8,11 @@ function notFound(req, res) {
 
 function errorHandler(error, req, res, next) {
   if (res.headersSent) return next(error);
-  if (error.name === 'SequelizeUniqueConstraintError') {
+  if (error.code === 11000) {
     return res.status(409).json({ error: 'A record with these unique values already exists.' });
   }
-  if (error.name === 'SequelizeValidationError' || error.name === 'SequelizeForeignKeyConstraintError') {
+  if (error.name === 'ValidationError' || error.name === 'CastError' || error.name === 'BSONError') {
     return res.status(400).json({ error: error.message });
-  }
-  if (error.name === 'SequelizeDatabaseError') {
-    console.error(error);
-    return res.status(400).json({ error: 'The request could not be processed by the database.' });
   }
   console.error(error);
   res.status(500).json({ error: 'An unexpected server error occurred.' });

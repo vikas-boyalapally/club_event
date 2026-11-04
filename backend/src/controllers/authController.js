@@ -46,21 +46,21 @@ async function login(req, res) {
   if (!config || !email || !password) {
     return res.status(400).json({ error: 'role, email, and password are required.' });
   }
-  const user = await config.Model.scope('withPassword').findOne({
-    where: { email: String(email).trim().toLowerCase() }
-  });
+  const user = await config.Model.findOne({
+    email: String(email).trim().toLowerCase()
+  }).select('+passwordHash');
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid email or password.' });
   }
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not configured.');
 
-  const id = user.get(`${role}Id`);
+  const id = user[`${role}Id`];
   const token = jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '8h'
   });
   const publicUser = user.toJSON();
   delete publicUser.passwordHash;
-  res.json({ token, user: publicUser });
+  res.json({ token, user: { ...publicUser, role } });
 }
 
 module.exports = { register, login };

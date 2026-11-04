@@ -1,17 +1,30 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Event = sequelize.define('Event', {
-  eventId: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true, field: 'event_id' },
-  title: { type: DataTypes.STRING(180), allowNull: false },
-  description: { type: DataTypes.TEXT, allowNull: false },
-  venue: { type: DataTypes.STRING(180), allowNull: false },
-  eventDate: { type: DataTypes.DATEONLY, allowNull: false, field: 'event_date' },
-  startTime: { type: DataTypes.TIME, allowNull: true, field: 'start_time' },
-  endTime: { type: DataTypes.TIME, allowNull: true, field: 'end_time' },
-  organizer: { type: DataTypes.STRING(120), allowNull: false },
-  capacity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-  createdByAdminId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, field: 'created_by_admin_id' }
+const schema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true, maxlength: 180 },
+  description: { type: String, required: true, trim: true },
+  venue: { type: String, required: true, trim: true, maxlength: 180 },
+  eventDate: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
+  startTime: { type: String, default: null },
+  endTime: { type: String, default: null },
+  organizer: { type: String, required: true, trim: true, maxlength: 120 },
+  capacity: { type: Number, min: 1, default: null },
+  createdByAdminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin', required: true }
+}, {
+  timestamps: true,
+  collection: 'events',
+  toJSON: {
+    virtuals: true,
+    transform(document, result) {
+      delete result._id;
+      delete result.__v;
+      return result;
+    }
+  }
 });
 
-module.exports = Event;
+schema.virtual('eventId').get(function getEventId() {
+  return this._id.toString();
+});
+
+module.exports = mongoose.models.Event || mongoose.model('Event', schema);

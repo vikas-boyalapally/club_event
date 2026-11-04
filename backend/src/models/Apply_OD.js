@@ -1,29 +1,54 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const ApplyOD = sequelize.define('Apply_OD', {
-  applicationId: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true, field: 'application_id' },
-  studentId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, field: 'student_id' },
-  eventId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, field: 'event_id' },
-  applicationStatus: {
-    type: DataTypes.ENUM('applied', 'cancelled'),
-    allowNull: false,
-    defaultValue: 'applied',
-    field: 'application_status'
-  },
+const schema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+  applicationStatus: { type: String, enum: ['applied', 'cancelled'], default: 'applied', required: true },
   odStatus: {
-    type: DataTypes.ENUM('not_requested', 'pending', 'approved', 'rejected'),
-    allowNull: false,
-    defaultValue: 'not_requested',
-    field: 'od_status'
+    type: String,
+    enum: ['not_requested', 'pending', 'approved', 'rejected'],
+    default: 'not_requested',
+    required: true
   },
-  odReason: { type: DataTypes.TEXT, allowNull: true, field: 'od_reason' },
-  reviewedByStaffId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true, field: 'reviewed_by_staff_id' },
-  reviewedAt: { type: DataTypes.DATE, allowNull: true, field: 'reviewed_at' },
-  reportText: { type: DataTypes.TEXT, allowNull: true, field: 'report_text' },
-  reportSubmittedAt: { type: DataTypes.DATE, allowNull: true, field: 'report_submitted_at' }
+  odReason: { type: String, trim: true, default: null },
+  reviewedByStaffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', default: null },
+  reviewedAt: { type: Date, default: null },
+  reportText: { type: String, trim: true, default: null },
+  reportSubmittedAt: { type: Date, default: null }
 }, {
-  indexes: [{ unique: true, fields: ['student_id', 'event_id'] }]
+  timestamps: true,
+  collection: 'apply_ods',
+  toJSON: {
+    virtuals: true,
+    transform(document, result) {
+      delete result._id;
+      delete result.__v;
+      return result;
+    }
+  }
 });
 
-module.exports = ApplyOD;
+schema.index({ studentId: 1, eventId: 1 }, { unique: true });
+schema.virtual('applicationId').get(function getApplicationId() {
+  return this._id.toString();
+});
+schema.virtual('student', {
+  ref: 'Student',
+  localField: 'studentId',
+  foreignField: '_id',
+  justOne: true
+});
+schema.virtual('event', {
+  ref: 'Event',
+  localField: 'eventId',
+  foreignField: '_id',
+  justOne: true
+});
+schema.virtual('reviewedBy', {
+  ref: 'Staff',
+  localField: 'reviewedByStaffId',
+  foreignField: '_id',
+  justOne: true
+});
+
+module.exports = mongoose.models.Apply_OD || mongoose.model('Apply_OD', schema);

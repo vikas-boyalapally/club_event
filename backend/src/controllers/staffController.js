@@ -1,17 +1,17 @@
-const { Op } = require('sequelize');
 const { Student, Event, ApplyOD, Staff } = require('../models');
 
 async function listStudents(req, res) {
-  const where = {};
+  const filter = {};
   if (req.query.search) {
-    const term = `%${String(req.query.search).trim()}%`;
-    where[Op.or] = [
-      { fullName: { [Op.like]: term } },
-      { email: { [Op.like]: term } },
-      { department: { [Op.like]: term } }
+    const term = String(req.query.search).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = new RegExp(term, 'i');
+    filter.$or = [
+      { fullName: match },
+      { email: match },
+      { department: match }
     ];
   }
-  const students = await Student.findAll({ where, order: [['fullName', 'ASC']] });
+  const students = await Student.find(filter).sort({ fullName: 1 });
   res.json({ students });
 }
 
@@ -21,15 +21,11 @@ async function listODApplications(req, res) {
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}.` });
   }
-  const applications = await ApplyOD.findAll({
-    where: { odStatus: status, applicationStatus: 'applied' },
-    include: [
-      { model: Student, as: 'student' },
-      { model: Event, as: 'event' },
-      { model: Staff, as: 'reviewedBy' }
-    ],
-    order: [['createdAt', 'ASC']]
-  });
+  const applications = await ApplyOD.find({ odStatus: status, applicationStatus: 'applied' })
+    .populate('student')
+    .populate('event')
+    .populate('reviewedBy', 'fullName email')
+    .sort({ createdAt: 1 });
   res.json({ applications });
 }
 
@@ -38,18 +34,19 @@ async function reviewODApplication(req, res) {
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: 'status must be approved or rejected.' });
   }
-  const application = await ApplyOD.findByPk(req.params.applicationId);
+  const application = await ApplyOD.findById(req.params.applicationId);
   if (!application || application.applicationStatus !== 'applied') {
     return res.status(404).json({ error: 'Event application not found.' });
   }
   if (application.odStatus !== 'pending') {
     return res.status(409).json({ error: 'Only pending OD applications can be reviewed.' });
   }
-  await application.update({
+  application.set({
     odStatus: status,
     reviewedByStaffId: req.user.id,
     reviewedAt: new Date()
   });
+  await application.save();
   res.json({ application });
 }
 

@@ -1,18 +1,18 @@
 require('dotenv').config();
-const sequelize = require('../config/database');
-require('../models');
+const { connectDatabase, mongoose } = require('../config/database');
+const models = require('../models');
 
-async function syncDatabase() {
+async function initializeDatabase() {
   try {
-    await sequelize.authenticate();
-    await sequelize.sync();
-    console.log('club_event database tables are ready.');
+    await connectDatabase();
+    await Promise.all(Object.values(models).map((Model) => Model.init()));
+    console.log('club_event MongoDB collections and indexes are ready.');
   } finally {
-    await sequelize.close();
+    await mongoose.disconnect();
   }
 }
 
-syncDatabase().catch((error) => {
-  console.error('Database synchronization failed:', error);
+initializeDatabase().catch((error) => {
+  console.error('MongoDB initialization failed:', error);
   process.exitCode = 1;
 });

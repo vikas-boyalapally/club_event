@@ -20,9 +20,9 @@ async function authenticate(req, res, next) {
     const Model = ROLE_MODELS[payload.role];
     if (!Model) return res.status(401).json({ error: 'Invalid authentication token.' });
 
-    const user = await Model.findByPk(payload.id);
+    const user = await Model.findById(payload.id);
     if (!user) return res.status(401).json({ error: 'Account no longer exists.' });
-    req.user = { id: user.get(`${payload.role}Id`), role: payload.role, record: user };
+    req.user = { id: user._id.toString(), role: payload.role, record: user };
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {

@@ -1,17 +1,28 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const mongoose = require('mongoose');
 
-const Student = sequelize.define('Student', {
-  studentId: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true, field: 'student_id' },
-  fullName: { type: DataTypes.STRING(120), allowNull: false, field: 'full_name' },
-  email: { type: DataTypes.STRING(254), allowNull: false, unique: true, validate: { isEmail: true } },
-  passwordHash: { type: DataTypes.STRING(255), allowNull: false, field: 'password_hash' },
-  department: { type: DataTypes.STRING(120), allowNull: false },
-  year: { type: DataTypes.STRING(20), allowNull: false },
-  phone: { type: DataTypes.STRING(30), allowNull: true }
+const schema = new mongoose.Schema({
+  fullName: { type: String, required: true, trim: true, maxlength: 120 },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 254 },
+  passwordHash: { type: String, required: true, select: false },
+  department: { type: String, required: true, trim: true, maxlength: 120 },
+  year: { type: String, required: true, trim: true, maxlength: 20 },
+  phone: { type: String, trim: true, maxlength: 30 }
 }, {
-  defaultScope: { attributes: { exclude: ['passwordHash'] } },
-  scopes: { withPassword: { attributes: { include: ['passwordHash'] } } }
+  timestamps: true,
+  collection: 'students',
+  toJSON: {
+    virtuals: true,
+    transform(document, result) {
+      delete result._id;
+      delete result.__v;
+      delete result.passwordHash;
+      return result;
+    }
+  }
 });
 
-module.exports = Student;
+schema.virtual('studentId').get(function getStudentId() {
+  return this._id.toString();
+});
+
+module.exports = mongoose.models.Student || mongoose.model('Student', schema);

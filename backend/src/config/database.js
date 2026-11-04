@@ -1,26 +1,12 @@
-const { Sequelize } = require('sequelize');
+const mongoose = require('mongoose');
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME || 'club_event',
-  process.env.DB_USER || 'root',
-  process.env.DB_PASSWORD || '',
-  {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT || 3306),
-    dialect: 'mysql',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    define: {
-      timestamps: true,
-      underscored: true,
-      freezeTableName: true
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
-  }
-);
+async function connectDatabase() {
+  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/';
+  await mongoose.connect(uri, {
+    dbName: process.env.MONGODB_DB || 'club_event',
+    serverSelectionTimeoutMS: 10000
+  });
+  console.log(`Connected to MongoDB database "${mongoose.connection.name}".`);
+}
 
-module.exports = sequelize;
+module.exports = { mongoose, connectDatabase };

@@ -2,11 +2,11 @@ const { Student, Staff, Admin, ApplyOD, Event } = require('../models');
 
 async function listAllRecords(req, res) {
   const [students, staff, admins, applications, events] = await Promise.all([
-    Student.findAll(),
-    Staff.findAll(),
-    Admin.findAll(),
-    ApplyOD.findAll({ include: [{ model: Student, as: 'student' }, { model: Event, as: 'event' }] }),
-    Event.findAll()
+    Student.find(),
+    Staff.find(),
+    Admin.find(),
+    ApplyOD.find().populate('student').populate('event'),
+    Event.find()
   ]);
   res.json({ students, staff, admins, applications, events });
 }
@@ -33,7 +33,7 @@ async function createEvent(req, res) {
 }
 
 async function updateEvent(req, res) {
-  const event = await Event.findByPk(req.params.eventId);
+  const event = await Event.findById(req.params.eventId);
   if (!event) return res.status(404).json({ error: 'Event not found.' });
   const allowed = [
     'title', 'description', 'venue', 'eventDate',
@@ -45,14 +45,16 @@ async function updateEvent(req, res) {
   if (!Object.keys(updates).length) {
     return res.status(400).json({ error: `Provide at least one of: ${allowed.join(', ')}.` });
   }
-  await event.update(updates);
+  event.set(updates);
+  await event.save();
   res.json({ event });
 }
 
 async function deleteEvent(req, res) {
-  const event = await Event.findByPk(req.params.eventId);
+  const event = await Event.findById(req.params.eventId);
   if (!event) return res.status(404).json({ error: 'Event not found.' });
-  await event.destroy();
+  await ApplyOD.deleteMany({ eventId: event._id });
+  await event.deleteOne();
   res.status(204).end();
 }
 

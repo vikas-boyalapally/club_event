@@ -4,10 +4,10 @@ Standalone React + Vite web application for the Club Event Management System.
 
 ## Run
 
-1. Start the API by following [`../backend/README.md`](../backend/README.md).
-2. Copy `.env.example` to `.env`. Set `VITE_API_URL` to the backend API base URL (default `http://localhost:3000/api`).
+1. Start the MongoDB-backed API by following [`../backend/README.md`](../backend/README.md).
+2. Copy `.env.example` to `.env`. The frontend defaults to `/api`; Vite proxies these requests to `http://localhost:3000`. If the backend runs elsewhere, set `VITE_BACKEND_URL` to its origin. For a deployed frontend, set `VITE_API_URL` to the deployed API base URL and configure the backend's `CORS_ORIGIN`.
 3. Run `npm install`, then `npm run dev`.
-4. Open the Vite development URL, usually `http://localhost:5173`.
+4. Open the Vite development URL, usually `http://localhost:5173`. The sign-in screen reports whether `/api/health` is reachable.
 
 Build a static production bundle with `npm run build`; preview it with `npm run preview`.
 

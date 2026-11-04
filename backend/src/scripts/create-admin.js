@@ -1,6 +1,6 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
-const sequelize = require('../config/database');
+const { connectDatabase, mongoose } = require('../config/database');
 const { Admin } = require('../models');
 
 async function createAdmin() {
@@ -9,10 +9,10 @@ async function createAdmin() {
     throw new Error('Set ADMIN_NAME, ADMIN_EMAIL, and an ADMIN_PASSWORD of at least 8 characters.');
   }
   try {
-    await sequelize.authenticate();
-    await sequelize.sync();
+    await connectDatabase();
+    await Admin.init();
     const email = ADMIN_EMAIL.trim().toLowerCase();
-    const existing = await Admin.findOne({ where: { email } });
+    const existing = await Admin.findOne({ email });
     if (existing) throw new Error(`An admin account already exists for ${email}.`);
     const admin = await Admin.create({
       fullName: ADMIN_NAME.trim(),
@@ -21,7 +21,7 @@ async function createAdmin() {
     });
     console.log(`Admin account created: ${admin.email}`);
   } finally {
-    await sequelize.close();
+    await mongoose.disconnect();
   }
 }
 

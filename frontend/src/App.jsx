@@ -1,22 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ArrowDownRight, ArrowRight, Bell, CalendarDays, Check, ChevronDown, CircleHelp,
   Clock3, Compass, FileText, LayoutDashboard, LogOut, Plus, Search, ShieldCheck,
   Sparkles, Users, X
 } from 'lucide-react';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000/api').replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 const roles = ['student', 'staff', 'admin'];
 
 async function api(path, { token, ...options } = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers
-    }
-  });
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers
+      }
+    });
+  } catch {
+    throw new Error('Can’t reach the backend. Start the backend server and try again.');
+  }
   if (response.status === 204) return null;
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body.error || `Request failed (${response.status}).`);
@@ -34,7 +39,10 @@ function initials(name = '') {
 
 function App() {
   const [session, setSession] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('club-event-session')) || null; } catch { return null; }
+    try {
+      const saved = JSON.parse(localStorage.getItem('club-event-session'));
+      return saved?.token && saved?.user?.role ? saved : null;
+    } catch { return null; }
   });
   const [notice, setNotice] = useState('');
   const [page, setPage] = useState('home');
@@ -167,6 +175,15 @@ function AuthScreen({ onLogin }) {
   const [form, setForm] = useState({ fullName: '', email: '', password: '', department: '', year: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [apiStatus, setApiStatus] = useState('checking');
+
+  useEffect(() => {
+    let active = true;
+    api('/health')
+      .then(() => { if (active) setApiStatus('connected'); })
+      .catch(() => { if (active) setApiStatus('offline'); });
+    return () => { active = false; };
+  }, []);
 
   const update = (key) => (event) => setForm((value) => ({ ...value, [key]: event.target.value }));
   const submit = async (event) => {
@@ -221,6 +238,10 @@ function AuthScreen({ onLogin }) {
           <div className="form-topline"><span>WELCOME TO GATHER</span><span>01 <i /> 03</span></div>
           <h2>{mode === 'login' ? 'Come on in.' : 'Let’s get you in.'}</h2>
           <p className="auth-subtitle">{mode === 'login' ? 'Your campus life is waiting.' : 'Create your campus account.'}</p>
+          <div className={`api-connection api-${apiStatus}`} role="status">
+            <span />
+            {apiStatus === 'checking' ? 'Connecting to the backend…' : apiStatus === 'connected' ? 'Backend connected' : 'Backend unavailable — start the API server'}
+          </div>
           <form onSubmit={submit} className="auth-form">
             <label className="field-label">I’M SIGNING IN AS</label>
             <div className="role-picker">
